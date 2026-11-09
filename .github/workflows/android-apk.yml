@@ -15,12 +15,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Android SDK diagnostics and licenses
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          which sdkmanager
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Configure Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: 12266719
+          packages: ''
+      - run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
