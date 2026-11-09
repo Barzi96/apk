@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 jobs:
   apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -15,13 +15,17 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Android SDK diagnostics and licenses
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          which sdkmanager
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Assemble
-        run: gradle --no-daemon :app:assembleDebug
+      - name: Assemble APK
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: RadiocaseFa-APK
