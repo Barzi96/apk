@@ -26,6 +26,7 @@ public final class MainActivity extends Activity {
   private Spinner organ,modality;
   private WebView web;
   private TextView info,translation;
+  private ScrollView answer;
   private Button translate;
   private String active="";
   private int page=1;
@@ -35,38 +36,73 @@ public final class MainActivity extends Activity {
 
   @Override public void onCreate(Bundle b){
     super.onCreate(b);
+    getWindow().setStatusBarColor(teal);
     prefs=getSharedPreferences("cases",MODE_PRIVATE);
     seen.addAll(prefs.getStringSet("seen",new HashSet<>()));
+
     LinearLayout root=col();
     root.setBackgroundColor(Color.WHITE);
     setContentView(root);
-    TextView title=txt("کیس‌خوان فارسی رادیولوژی",20);
+
+    TextView title=txt("کیس‌خوان فارسی رادیولوژی",19);
+    title.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
     title.setTextColor(Color.WHITE);
     title.setBackgroundColor(teal);
-    title.setPadding(18,18,18,18);
-    root.addView(title);
-    LinearLayout pick=row();
-    organ=new Spinner(this); modality=new Spinner(this);
-    organ.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,organs));
-    modality.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,modes));
-    pick.addView(organ,new LinearLayout.LayoutParams(0,55,1));
-    pick.addView(modality,new LinearLayout.LayoutParams(0,55,1));
-    root.addView(pick);
-    LinearLayout actions=row();
-    Button search=btn("جست‌وجو"),read=btn("خواندن فهرست"),next=btn("کیس جدید");
-    actions.addView(search,new LinearLayout.LayoutParams(0,52,1));
-    actions.addView(read,new LinearLayout.LayoutParams(0,52,1));
-    actions.addView(next,new LinearLayout.LayoutParams(0,52,1));
-    root.addView(actions);
-    LinearLayout actions2=row();
-    Button more=btn("صفحه بعد"),history=btn("تاریخچه"),key=btn("کلید Gemini");
-    translate=btn("ترجمه");
-    for(Button x:new Button[]{more,history,key,translate})
-      actions2.addView(x,new LinearLayout.LayoutParams(0,48,1));
-    root.addView(actions2);
-    info=txt("ارگان و مدالیتی را انتخاب کن.",12);
-    info.setPadding(12,8,12,8);
-    root.addView(info);
+    title.setPadding(dp(18),0,dp(18),0);
+    root.addView(title,new LinearLayout.LayoutParams(-1,dp(54)));
+
+    Button toggle=btnAlt("فیلترها و ابزارها  ▲");
+    LinearLayout.LayoutParams toggleP=new LinearLayout.LayoutParams(-1,dp(48));
+    toggleP.setMargins(dp(8),dp(6),dp(8),dp(2));
+    root.addView(toggle,toggleP);
+
+    ScrollView panelScroll=new ScrollView(this);
+    panelScroll.setFillViewport(false);
+    panelScroll.setVerticalScrollBarEnabled(true);
+    LinearLayout panel=col();
+    panel.setPadding(dp(10),dp(4),dp(10),dp(6));
+    panelScroll.addView(panel);
+    root.addView(panelScroll,new LinearLayout.LayoutParams(-1,dp(255)));
+
+    TextView organLabel=txt("انتخاب ارگان یا دستگاه بدن",13);
+    organLabel.setPadding(dp(5),0,dp(5),dp(3));
+    panel.addView(organLabel);
+    organ=dropdown(organs);
+    panel.addView(organ,new LinearLayout.LayoutParams(-1,dp(52)));
+
+    TextView modeLabel=txt("انتخاب نوع تصویربرداری",13);
+    modeLabel.setPadding(dp(5),dp(8),dp(5),dp(3));
+    panel.addView(modeLabel);
+    modality=dropdown(modes);
+    panel.addView(modality,new LinearLayout.LayoutParams(-1,dp(52)));
+
+    Button search=btn("جست‌وجوی کیس‌ها");
+    Button read=btnAlt("خواندن فهرست");
+    addButtonPair(panel,search,read);
+
+    Button more=btnAlt("صفحه بعد");
+    Button history=btnAlt("تاریخچه کیس‌ها");
+    addButtonPair(panel,more,history);
+
+    Button key=btnAlt("تنظیم کلید ترجمه Gemini");
+    LinearLayout.LayoutParams keyP=new LinearLayout.LayoutParams(-1,dp(49));
+    keyP.setMargins(dp(4),dp(4),dp(4),dp(4));
+    panel.addView(key,keyP);
+
+    LinearLayout mainActions=row();
+    Button next=btn("کیس بعدی");
+    translate=btn("ترجمه فارسی");
+    addButtonPair(mainActions,next,translate);
+    root.addView(mainActions);
+
+    info=txt("از فیلترها شروع کن، سپس جست‌وجو و خواندن فهرست را بزن.",12);
+    info.setPadding(dp(14),dp(7),dp(14),dp(7));
+    info.setMaxLines(2);
+    info.setMinHeight(dp(44));
+    info.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+    info.setBackgroundColor(0xffedf5f5);
+    root.addView(info,new LinearLayout.LayoutParams(-1,-2));
+
     web=new WebView(this);
     web.getSettings().setJavaScriptEnabled(true);
     web.getSettings().setDomStorageEnabled(true);
@@ -92,34 +128,108 @@ public final class MainActivity extends Activity {
             if("true".equals(v)&&url.equals(w.getUrl())&&!active.isEmpty()){
               seen.add(active);
               prefs.edit().putStringSet("seen",new HashSet<>(seen)).apply();
-              message("کیس باز شد و در تاریخچه ثبت شد. پاسخ سایت را آشکار کن، سپس ترجمه را بزن.");
+              message("کیس باز شد و در تاریخچه ثبت شد؛ برای مشاهده پاسخ فارسی، ترجمه را بزن.");
             }else message("بارگذاری کیس تأیید نشد؛ در تاریخچه ثبت نشد.");
           });
         } else if(url.contains("/quizzes")){listing=true;message("فهرست باز شد؛ «خواندن فهرست» را بزن.");}
       }
     });
     root.addView(web,new LinearLayout.LayoutParams(-1,0,1));
+
     translation=txt("",14);
     translation.setTextIsSelectable(true);
-    ScrollView answer=new ScrollView(this);
+    translation.setPadding(dp(14),dp(10),dp(14),dp(10));
+    answer=new ScrollView(this);
+    answer.setBackgroundColor(0xfff4f7f7);
     answer.addView(translation);
-    root.addView(answer,new LinearLayout.LayoutParams(-1,0,0.55f));
+    answer.setVisibility(View.GONE);
+    root.addView(answer,new LinearLayout.LayoutParams(-1,0,0.6f));
+
+    toggle.setOnClickListener(v->{
+      boolean open=panelScroll.getVisibility()!=View.VISIBLE;
+      panelScroll.setVisibility(open?View.VISIBLE:View.GONE);
+      toggle.setText(open?"فیلترها و ابزارها  ▲":"فیلترها و ابزارها  ▼");
+    });
     search.setOnClickListener(v->{page=1;openList();});
     more.setOnClickListener(v->{page++;openList();});
-    read.setOnClickListener(v->collect());
+    read.setOnClickListener(v->{collect();panelScroll.setVisibility(View.GONE);toggle.setText("فیلترها و ابزارها  ▼");});
     next.setOnClickListener(v->nextCase());
     history.setOnClickListener(v->showHistory());
     key.setOnClickListener(v->showKey());
     translate.setOnClickListener(v->translateCurrent());
   }
+
+  private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
+
+  private Spinner dropdown(String[] values){
+    Spinner sp=new Spinner(this);
+    sp.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+    ArrayAdapter<String> adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,values){
+      private void format(TextView t){
+        t.setTextSize(15);
+        t.setSingleLine(true);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        t.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        t.setTextDirection(View.TEXT_DIRECTION_RTL);
+        t.setPadding(dp(12),0,dp(12),0);
+      }
+      @Override public View getView(int position,View convertView,android.view.ViewGroup parent){
+        TextView t=(TextView)super.getView(position,convertView,parent);
+        format(t);return t;
+      }
+      @Override public View getDropDownView(int position,View convertView,android.view.ViewGroup parent){
+        TextView t=(TextView)super.getDropDownView(position,convertView,parent);
+        format(t);t.setMinHeight(dp(48));return t;
+      }
+    };
+    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+    sp.setAdapter(adapter);
+    sp.setBackgroundColor(0xffedf5f5);
+    return sp;
+  }
+
+  private void addButtonPair(LinearLayout parent,Button first,Button second){
+    LinearLayout bar=row();
+    LinearLayout.LayoutParams one=new LinearLayout.LayoutParams(0,dp(52),1);
+    one.setMargins(dp(4),dp(3),dp(4),dp(3));
+    LinearLayout.LayoutParams two=new LinearLayout.LayoutParams(0,dp(52),1);
+    two.setMargins(dp(4),dp(3),dp(4),dp(3));
+    bar.addView(first,one);
+    bar.addView(second,two);
+    parent.addView(bar,new LinearLayout.LayoutParams(-1,-2));
+  }
+
+  private Button btnAlt(String s){
+    Button b=btn(s);
+    android.graphics.drawable.GradientDrawable bg=new android.graphics.drawable.GradientDrawable();
+    bg.setColor(0xffe4f2f2);
+    bg.setCornerRadius(dp(11));
+    b.setBackground(bg);
+    b.setTextColor(teal);
+    return b;
+  }
   private LinearLayout col(){LinearLayout x=new LinearLayout(this);x.setOrientation(1);x.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);return x;}
   private LinearLayout row(){LinearLayout x=new LinearLayout(this);x.setOrientation(0);x.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);return x;}
   private TextView txt(String s,int sp){TextView x=new TextView(this);x.setText(s);x.setTextSize(sp);x.setTextDirection(View.TEXT_DIRECTION_RTL);x.setTextColor(Color.DKGRAY);return x;}
-  private Button btn(String s){Button b=new Button(this);b.setAllCaps(false);b.setText(s);b.setTextSize(11);return b;}
+  private Button btn(String s){
+    Button b=new Button(this);
+    b.setAllCaps(false);
+    b.setText(s);
+    b.setTextSize(14);
+    b.setGravity(Gravity.CENTER);
+    b.setPadding(dp(8),0,dp(8),0);
+    b.setMinHeight(dp(48));
+    b.setTextColor(Color.WHITE);
+    android.graphics.drawable.GradientDrawable bg=new android.graphics.drawable.GradientDrawable();
+    bg.setColor(teal);
+    bg.setCornerRadius(dp(11));
+    b.setBackground(bg);
+    return b;
+  }
   private void message(String s){info.setText(s);}
   private String normalize(String url){try{Uri u=Uri.parse(url);String p=u.getPath();if(p==null)return "";if(p.matches("/cases/[^/]+/?")||p.matches("/quizzes/[0-9]+/?"))return p.replaceAll("/$","");}catch(Exception ignored){}return "";}
   private void openList(){
-    links.clear();active="";translation.setText("");
+    links.clear();active="";translation.setText("");answer.setVisibility(View.GONE);
     String url=base+"/quizzes";
     int i=organ.getSelectedItemPosition();
     if(i>0)url+="/"+paths[i];
@@ -142,7 +252,7 @@ public final class MainActivity extends Activity {
     });
   }
   private void nextCase(){
-    for(String u:links){if(!seen.contains(normalize(u))){active=normalize(u);web.loadUrl(u);translation.setText("");return;}}
+    for(String u:links){if(!seen.contains(normalize(u))){active=normalize(u);web.loadUrl(u);translation.setText("");answer.setVisibility(View.GONE);return;}}
     message("کیس جدیدی در این صفحه نیست؛ «صفحه بعد» را بزن.");
   }
   private void showHistory(){
@@ -183,7 +293,7 @@ public final class MainActivity extends Activity {
             if(status<200||status>=300)throw new IOException("HTTP "+status+": "+bytes.toString("UTF-8").substring(0,Math.min(150,bytes.size())));
             JSONObject response=new JSONObject(bytes.toString("UTF-8"));
             String fa=response.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text");
-            runOnUiThread(()->{if(url.equals(web.getUrl())){translation.setText(fa);message("ترجمه فارسی آماده شد؛ با متن اصلی مقایسه کن.");}});
+            runOnUiThread(()->{if(url.equals(web.getUrl())){translation.setText(fa);answer.setVisibility(View.VISIBLE);message("ترجمه فارسی آماده شد؛ با متن اصلی مقایسه کن.");}});
           }catch(Exception err){runOnUiThread(()->message("خطا در ترجمه: "+err.getMessage()));}
         });
       }catch(Exception err){message("متن صفحه قابل خواندن نیست.");}
