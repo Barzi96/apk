@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/radiocase-fa-v0.1.1
+      - feature/radiocase-fa-ui-v0.1.2
   workflow_dispatch:
 jobs:
   apk:
